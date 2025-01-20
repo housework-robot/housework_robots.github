@@ -450,12 +450,7 @@ Two questions here,
 ### 3.4 `motion_controller` in the lower tier
 
 [`motion_controller`](./S06E08_src/src/Mushibot20250120/src/lower_tier/motion_controller.h) in the lower tier
-consists of various motion control algorithms, including 
-
-1. How to stand upright or squat down, and keep balanced.
-2. How to jump high or jump long.
-3. How to roll over and stand up after falling down.
-4. How to run steadily across the rugged ground。
+will consist of various motion control algorithms. 
      
 For the time being, `motion_controller` is a skeleton. 
 With more and more motion control algorithms, `motion_controller` will grow big. 
@@ -469,11 +464,28 @@ we use "AI models" for those complex algorithms, especially when their internal 
 &nbsp;
 ## 4. Future work
 
-Here is a simple demo for the entire dataflow
+Implement the various motion control algorithms, including 
+
+1. How to stand upright or squat down, and keep balanced.
+2. How to jump high or jump long.
+3. How to roll over and stand up after falling down.
+4. How to run steadily across the rugged ground。
 
 
 &nbsp;
 ## 5. Demo
+
+Click the following image to view a video of a simple demo.
+
+The demo shows the entire dataflow, 
+
+1. A human user clicked a button on the webpage of the teleoperation website, to send a command to the mushibot.
+   
+2. The mushibot received the remote command via Websocket, and printed out the log in the Serial Monitor.
+
+3. Following the command, the mushibot moved his legs and wheels.
+
+   
 
 
 
