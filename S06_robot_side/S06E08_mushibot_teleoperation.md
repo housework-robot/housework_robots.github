@@ -197,25 +197,6 @@ into a 3-tier system architecture.
    The middle tier consists of `main.cpp` and other source codes.
    The middle tier is the bridge between the upper tier and the lower tier.
 
-   * [`main.cpp`](./S06E08_src/src/Mushibot20250120/src/main.cpp)
-
-     All the global variables and functions are defined in `main.cpp`.
-     For example, all the network event handlers are implemented here, for two reasons.
-
-     1. It is not allowed to use
-        [any member functions for any system interrupt services including network event handlers](https://isocpp.org/wiki/faq/pointers-to-members#memfnptr-vs-fnptr-more).
-    
-     2. To make it convenient to maintain, we move all the global variables and functions in `main.cpp`.
-    
-   * [`robot_commander.{h,cpp}`](./S06E08_src/src/Mushibot20250120/src/robot_commander.h)
-  
-     `robot_commander` receives remote commands from the human users via
-     [`telecomm_channel`](./S06E08_src/src/Mushibot20250120/src/upper_tier/telecomm_channel.h) in the upper tier.
-     
-     Then it passes those commands to [`motion_controller`](./S06E08_src/src/Mushibot20250120/src/lower_tier/motion_controller.h) in the lower tier.
-     
-     `motion_controller` controls the detail movement of the mushibot,
-     like the speeds of the wheel motors, the angular positions of the servos for the leg joints. 
 
 3. [The lower tier](./S06E08_src/src/Mushibot20250120/src/lower_tier)
 
@@ -314,9 +295,120 @@ String WsWifi::http_post(String http_url, JsonDocument payload_json) {
 &nbsp;
 ### 3.2 `main.cpp` in the middle tier
 
+All the global variables and functions are defined in 
+[`main.cpp`](./S06E08_src/src/Mushibot20250120/src/main.cpp)
+
+All the network event handlers are implemented here as global functions, for two reasons,
+
+1. It is NOT allowed to use
+   [any member functions for any system interrupt services](https://isocpp.org/wiki/faq/pointers-to-members#memfnptr-vs-fnptr-more)
+    including network event handlers.
+
+3. To make it convenient to maintain, we move all the global variables and functions in `main.cpp`.
+
+&nbsp;
+
+For example, 
+
+1. in the upper tier
+   [`TelecommChannel::setup_telecomm()`](./S06E08_src/src/Mushibot20250120/src/upper_tier/telecomm_channel.cpp#L61)
+   takes charge of receiving remote commands via [`WebSocketsServer`](./S06E08_src/src/Mushibot20250120/src/upper_tier/telecomm_channel.h#L50), 
+
+   ~~~
+   void TelecommChannel::setup_telecomm() {
+       ...
+       // Setup the websocket. 
+       websocket.begin();
+       websocket.onEvent(handle_WebsocketEvents);
+       Log.traceln("WebSocketsServer is ready.\n");
+       ...
+   ~~~
+
+2. The callback function for the websocket events is [`handle_WebsocketEvents()`](./S06E08_src/src/Mushibot20250120/src/main.cpp#L44),
+   defined in `main.cpp`. 
+
+   `handle_WebsocketEvents()` wants to call 
+   [`TeleopProtocol::parse_command(String &teleop_command)`](./S06E08_src/src/Mushibot20250120/src/upper_tier/teleop_protocol.cpp#L11)
+   to parse the remote command payload, and store the commands in `TeleopProtocol` member variables. 
+
+   ~~~
+   void handle_WebsocketEvents(
+       uint8_t num,
+       WStype_t type,
+       uint8_t * payload,
+       size_t length) 
+   {
+       // Figure out the type of WebSocket event
+       switch (type) {
+           ...
+           case WStype_TEXT:     
+               if (length > 0) {
+                   char payload_chars[length];
+                   sprintf(payload_chars, "%s", payload);
+                   String payload_str = String(payload_chars);
+
+                   Log.noticeln("WebSocket Client: '%u', Payload: '%s'.\n", num, payload_str.c_str());
+                   protocol.parse_command(payload_str);
+               }
+            ...
+     ~~~
+
+
+&nbsp;
+
+Now the challenge is that as an event handler, `handle_WebsocketEvents()` can not be a member function of any class 
+[as previously mentioned](https://isocpp.org/wiki/faq/pointers-to-members#memfnptr-vs-fnptr-more). 
+
+As a solution, 
+
+1. We initialize an object instance of 
+   [`TeleopProtocol protocol = TeleopProtocol()`](./S06E08_src/src/Mushibot20250120/src/upper_tier/teleop_protocol.cpp)
+   in [`main.cpp`](./S06E08_src/src/Mushibot20250120/src/main.cpp#L12) as a global variable. 
+
+2. We define [`handle_WebsocketEvents() in main.cpp`](./S06E08_src/src/Mushibot20250120/src/main.cpp#L44)
+   as a global function.
+
+And now, it is perfectly legal for the global function `handle_WebsocketEvents()` to call the global variable `protocol`.
+
+~~~
+#include "upper_tier/teleop_protocol.h"
+TeleopProtocol protocol = TeleopProtocol();
+
+void handle_WebsocketEvents(
+  uint8_t num,
+  WStype_t type,
+  uint8_t * payload,
+  size_t length) 
+{
+  // Figure out the type of WebSocket event
+  switch (type) {
+      ...
+      case WStype_TEXT:     
+          if (length > 0) {
+              char payload_chars[length];
+              sprintf(payload_chars, "%s", payload);
+              String payload_str = String(payload_chars);
+
+              Log.noticeln("WebSocket Client: '%u', Payload: '%s'.\n", num, payload_str.c_str());
+              protocol.parse_command(payload_str);
+          }
+      ...
+   ~~~
+    
+
 
 &nbsp;
 ### 3.3 `robot_commander` in the middle tier
+
+   * [`robot_commander.{h,cpp}`](./S06E08_src/src/Mushibot20250120/src/robot_commander.h)
+  
+     `robot_commander` receives remote commands from the human users via
+     [`telecomm_channel`](./S06E08_src/src/Mushibot20250120/src/upper_tier/telecomm_channel.h) in the upper tier.
+     
+     Then it passes those commands to [`motion_controller`](./S06E08_src/src/Mushibot20250120/src/lower_tier/motion_controller.h) in the lower tier.
+     
+     `motion_controller` controls the detail movement of the mushibot,
+     like the speeds of the wheel motors, the angular positions of the servos for the leg joints. 
 
 &nbsp;
 ### 3.4 `motion_controller` in the middle tier
