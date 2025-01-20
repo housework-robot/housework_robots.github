@@ -179,7 +179,54 @@ Here is a fragment of [the embedded-js webpage](./S06E08_src/src/Mushibot2025012
 &nbsp;
 ## 3. Robot 3-tier system architecture
 
+To make the mushibot system more modular, 
+we massively reconstruct [the previous system](./S06E07_src/src/Mushibot20250114)
+into a 3-tier system architecture. 
 
+1. [The upper_tier](./S06E08_src/src/Mushibot20250120/src/upper_tier)
+
+   The upper tier consists of the source codes that are not related to the mushibot.
+   That means when the mushibot changes its motors, servos, wheels, IMU, even its legs and mechanical structure,
+   the upper tier's source codes don't have to update.
+
+   The upper tier's source codes rely on Arduino-ESP32 modules.
+   Only when we change the mushbot's CPU from ESP32 to other chips, we have to update the upper tier's source code. 
+
+2. [The middle tier](./S06E08_src/src/Mushibot20250120/src)
+
+   The middle tier consists of `main.cpp` and other source codes.
+   The middle tier is the bridge between the upper tier and the lower tier.
+
+   * [`main.cpp`](./S06E08_src/src/Mushibot20250120/src/main.cpp)
+
+     All the global variables and functions are defined in `main.cpp`.
+     For example, all the network event handlers are implemented here, for two reasons.
+
+     1. It is not allowed to use
+        [any member functions for any system interrupt services including network event handlers](https://isocpp.org/wiki/faq/pointers-to-members#memfnptr-vs-fnptr-more).
+    
+     2. To make it convenient to maintain, we move all the global variables and functions in `main.cpp`.
+    
+   * [`robot_commander.{h,cpp}`](./S06E08_src/src/Mushibot20250120/src/robot_commander.h)
+  
+     `robot_commander` receives remote commands from the human users via
+     [`telecomm_channel`](./S06E08_src/src/Mushibot20250120/src/upper_tier/telecomm_channel.h) in the upper tier.
+     
+     Then it passes those commands to [`motion_controller`](./S06E08_src/src/Mushibot20250120/src/lower_tier/motion_controller.h) in the lower tier.
+     
+     `motion_controller` controls the detail movement of the mushibot,
+     like the speeds of the wheel motors, the angular positions of the servos for the leg joints. 
+
+3. [The lower tier](./S06E08_src/src/Mushibot20250120/src/lower_tier)
+
+   The lower tier consists of the source codes that are closely related to the mushibot.
+   That means when the mushibot changes its motors, servos, wheels, IMU, even its legs and mechanical structure,
+   the lower tier's source codes have to update to keep aligned with those changes.
+
+   For example, [`motion_controller`](./S06E08_src/src/Mushibot20250120/src/lower_tier/motion_controller.h)
+   relies on reading the IMU data, controlling the wheel motor speeds, and controlling the angular positions of the leg servos. 
+   And these reading and controlling rely on the electronic components of [the mushibot system](./S06E03_anatomy_wheel_legged_bot.md)
+   
      
 &nbsp;
 ### 3.1 Http client in the upper tier
