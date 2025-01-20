@@ -316,10 +316,10 @@ String WsWifi::http_post(String http_url, JsonDocument payload_json) {
 
 
 &nbsp;
-### 3.3 `robot_commander.{h,cpp}` in the middle tier
+### 3.3 `robot_commander` in the middle tier
 
 &nbsp;
-### 3.4 `motion_controller.{h,cpp}` in the middle tier
+### 3.4 `motion_controller` in the middle tier
 
 
 &nbsp;
