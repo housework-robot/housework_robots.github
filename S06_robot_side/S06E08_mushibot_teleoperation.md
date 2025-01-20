@@ -365,7 +365,7 @@ As a solution,
    [`TeleopProtocol protocol = TeleopProtocol()`](./S06E08_src/src/Mushibot20250120/src/upper_tier/teleop_protocol.cpp)
    in [`main.cpp`](./S06E08_src/src/Mushibot20250120/src/main.cpp#L12) as a global variable. 
 
-2. We define [`handle_WebsocketEvents() in main.cpp`](./S06E08_src/src/Mushibot20250120/src/main.cpp#L44)
+2. We define [`handle_WebsocketEvents()`](./S06E08_src/src/Mushibot20250120/src/main.cpp#L44) in `main.cpp`.
    as a global function.
 
 And now, it is perfectly legal for the global function `handle_WebsocketEvents()` to call the global variable `protocol`.
@@ -400,31 +400,80 @@ void handle_WebsocketEvents(
 &nbsp;
 ### 3.3 `robot_commander` in the middle tier
 
-   * [`robot_commander.{h,cpp}`](./S06E08_src/src/Mushibot20250120/src/robot_commander.h)
-  
-     `robot_commander` receives remote commands from the human users via
-     [`telecomm_channel`](./S06E08_src/src/Mushibot20250120/src/upper_tier/telecomm_channel.h) in the upper tier.
+After the commands from a remote human user have been received by 
+[`TelecommChannel`](./S06E08_src/src/Mushibot20250120/src/upper_tier/telecomm_channel.cpp#L61), 
+parsed and stored in 
+[`TeleopProtocol`](./S06E08_src/src/Mushibot20250120/src/main.cpp#L44),
+[`RobotCommander`](./S06E08_src/src/Mushibot20250120/src/robot_commander.cpp#L19) 
+dispatches the tasks to the related functions of 
+[`MotionController`](./S06E08_src/src/Mushibot20250120/src/lower_tier/motion_controller.h).
+
+`RobotCommander` is a bridge between `TeleopProtocol` of the upper tier, and `MotionController` of the lower tier.
+
+[RobotCommander accesses TeleopProtocol](./S06E08_src/src/Mushibot20250120/src/robot_commander.cpp#L3)
+as a global variable. 
+
+~~~
+extern TeleopProtocol protocol;
+~~~
+
+Meanwhile, [RobotCommander uses MotionController](./S06E08_src/src/Mushibot20250120/src/robot_commander.h#L19)
+as a member variable. 
+
+~~~
+MotionController motion_controller = MotionController();
+~~~
+
+Two questions here,
+
+1. How about adding a member variable to `RobotCommander` class, as a pointer to the global variable `TeleopProtocol`?
+
+   Yes, it is legal.
+
+   But to avoid the confusion about the origin of `TeleopProtocol` instance, we decide to keep it simple.
+   We use all global variables in the `extern` way,
+   rather than a member variable pointing to any global variables. 
+
+2. How about asking `main.cpp` to initialize an object instance for `MotionController` as another global variable,
+   and then asking `RobotCommander` to access `MotionController` in the same way as `TeleopProtocol`?
+
+   Yes, it is legal.
+
+   But we decide to keep the amount of global variables and global functions as small as possible,
+   in order to make the system more modular.
+
+   That is to say, in case we can use member variables and member functions,
+   we don't use them as global variables and global functions. 
+
+
+&nbsp;
+### 3.4 `motion_controller` in the lower tier
+
+[`motion_controller`](./S06E08_src/src/Mushibot20250120/src/lower_tier/motion_controller.h) in the lower tier
+consists of various motion control algorithms, including 
+
+1. How to stand upright or squat down, and keep balanced.
+2. How to jump high or jump long.
+3. How to roll over and stand up after falling down.
+4. How to run steadily across the rugged ground。
      
-     Then it passes those commands to [`motion_controller`](./S06E08_src/src/Mushibot20250120/src/lower_tier/motion_controller.h) in the lower tier.
-     
-     `motion_controller` controls the detail movement of the mushibot,
-     like the speeds of the wheel motors, the angular positions of the servos for the leg joints. 
+For the time being, `motion_controller` is a skeleton. 
+With more and more motion control algorithms, `motion_controller` will grow big. 
 
-&nbsp;
-### 3.4 `motion_controller` in the middle tier
+Sooner or later, algorithms may not be powerful enough for mushibot. By then, we will use AI models for the motion control.
 
-
-&nbsp;
-## 4. WebSocket client in JavaScript
+Sometimes we use the terms "algorithm" and "AI model" interchangeably, but more often, 
+we use "AI models" for those complex algorithms, especially when their internal workflows are not deterministic. 
 
 
 &nbsp;
-## 5. Parsing payload with ArduinoJson
+## 4. Future work
+
+Here is a simple demo for the entire dataflow
 
 
 &nbsp;
-## 6. Future work
+## 5. Demo
 
-&nbsp;
-## 7. Demo 
+
 
