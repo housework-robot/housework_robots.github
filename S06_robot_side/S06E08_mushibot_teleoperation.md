@@ -58,7 +58,7 @@ and [embedded-js templates](https://github.com/mde/ejs)
 to construct an experimental website. 
 
 Here is a fragment of the source code of 
-[the express-js web server](./S06E08_src/src/Mushibot20250117/test/teleop_website/app.js). 
+[the express-js web server](./S06E08_src/src/Mushibot20250120/test/teleop_website/app.js). 
 
 ~~~
 const express = require("express");
@@ -123,7 +123,7 @@ As mentioned in the previous section, the express-js web server passes a paramet
 one parameter is `robot_ip`, 
 and the embedded-js webpage can use it by `<%= robot_ip %>`. 
 
-Here is a fragment of [the embedded-js webpage](./S06E08_src/src/Mushibot20250117/test/teleop_website/views/index.ejs#L310). 
+Here is a fragment of [the embedded-js webpage](./S06E08_src/src/Mushibot20250120/test/teleop_website/views/index.ejs#L310). 
 
 ~~~
 <script>
@@ -156,7 +156,7 @@ Here is a fragment of [the embedded-js webpage](./S06E08_src/src/Mushibot2025011
 
    The javascript can use the `robot_ip` parameter by `<%= robot_ip %>`.
 
-   By the way, [the title of the webpage](./S06E08_src/src/Mushibot20250117/test/teleop_website/views/index.ejs#L265)
+   By the way, [the title of the webpage](./S06E08_src/src/Mushibot20250120/test/teleop_website/views/index.ejs#L265)
    also use `robot_ip` parameter.
 
    ~~~
@@ -185,9 +185,9 @@ Here is a fragment of [the embedded-js webpage](./S06E08_src/src/Mushibot2025011
 ### 3.1 Http client in the upper tier
 
 In [the previous blog](./S06E07_mushibot_wifi_ws_http.md#4-https-client), 
-we explained how we implemented [https client](./S06E08_src/src/Mushibot20250117/src/wswifi.cpp#L299) for GET. 
+we explained how we implemented [https client](./S06E08_src/src/Mushibot20250120/src/upper_tier/telecomm_channel.cpp#L297) for https GET. 
 
-This time, we implemented https client for both GET and POST.
+This time, we implemented http client for both GET and POST.
 
 The following source code fragment implements http client for POST, with payload in json. 
 
@@ -226,7 +226,7 @@ String WsWifi::http_post(String http_url, JsonDocument payload_json) {
 
    Here we assumed that the mushibot has already connected to the wifi.
 
-   [`String WsWifi::connect_wifi(String ssid, String password)`](./S06E08_src/src/Mushibot20250117/src/wswifi.cpp#L132)
+   [`String TelecommChannel::connect_wifi(String ssid, String password)`](./S06E08_src/src/Mushibot20250120/src/upper_tier/telecomm_channel.cpp#L133)
     handles the connection to the wifi. 
 
 2. `http_client.begin(http_url + "/post_json")`
@@ -234,7 +234,7 @@ String WsWifi::http_post(String http_url, JsonDocument payload_json) {
    The http client connects to our teleoperation website whose URL is `http_url`.
 
    Referring to the express-js web server's source code,
-   [the route "/post_json"](./S06E08_src/src/Mushibot20250117/test/teleop_website/app.js#L55)
+   [the route "/post_json"](./S06E08_src/src/Mushibot20250120/test/teleop_website/app.js#L55)
    is dedicated for http POST requests.
 
 3. `http_client.addHeader("Content-Type", "application/json")`
@@ -242,7 +242,7 @@ String WsWifi::http_post(String http_url, JsonDocument payload_json) {
    We must specify in the http request header, that the `Content-Type` is `application/json`.
 
    In this way, we trigger the express-js web server to ask
-   [the "bodyParser" to process](./S06E08_src/src/Mushibot20250117/test/teleop_website/app.js#L13)
+   [the "bodyParser" to process](./S06E08_src/src/Mushibot20250120/test/teleop_website/app.js#L13)
    the http POST request's body as a json payload.
 
 4. `serializeJson(payload_json, payload_str)`
@@ -260,7 +260,7 @@ String WsWifi::http_post(String http_url, JsonDocument payload_json) {
 
 6. `String http_res_str = http_client.getString()`
 
-   When [our express-js web server](./S06E08_src/src/Mushibot20250117/test/teleop_website/app.js#L58)
+   When [our express-js web server](./S06E08_src/src/Mushibot20250120/test/teleop_website/app.js#L58)
    receives and handles the http POST request from the mushibot, it sends back response in string. 
 
 
