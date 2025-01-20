@@ -17,13 +17,16 @@ In this blog, we will discuss and implement teleoperation for Mushibot, a wheel-
 
 
      3.1 A human user uses a browser to open the webpage of the website. 
-         When the browser opens the webpage, the webpage's javascript connects to the mushibot's as a websocket client.
+         When the browser opens the webpage, 
+         the webpage's javascript connects to the mushibot's as a websocket client.
          
          Notice that the websocket connection links the human user's browser to the remote mushibot directly, 
-         rather than indirectly via the website, to prevent the website from being a traffic bottleneck. 
+         rather than indirectly via the website, 
+         to prevent the website from being a traffic bottleneck. 
          
      3.2 The human user clicks the control buttons in the webpage,
-         and the webpage's javascript sends the control commands, like "Forward", "Left", "Jump" to the mushibot.
+         and the webpage's javascript sends the control commands, 
+         like "forward", "left", "jump", with parameters to the mushibot.
 
      3.2 The websocket server running in the mushibot receives the commands, parses them, 
          and then control the motion of the mushibot. 
@@ -172,9 +175,14 @@ Here is a fragment of [the embedded-js webpage](./S06E08_src/src/Mushibot2025011
 
    The mushibot sends the `robot_ip` by http POST to the express-js web server.
 
+
+&nbsp;
+## 3. Robot 3-tier system architecture
+
+
      
 &nbsp;
-## 3. Http client in Arduino C++
+### 3.1 Http client in the upper tier
 
 In [the previous blog](./S06E07_mushibot_wifi_ws_http.md#4-https-client), 
 we explained how we implemented [https client](./S06E08_src/src/Mushibot20250117/src/wswifi.cpp#L299) for GET. 
@@ -255,6 +263,16 @@ String WsWifi::http_post(String http_url, JsonDocument payload_json) {
    When [our express-js web server](./S06E08_src/src/Mushibot20250117/test/teleop_website/app.js#L58)
    receives and handles the http POST request from the mushibot, it sends back response in string. 
 
+
+&nbsp;
+### 3.2 `main.cpp` in the middle tier
+
+
+&nbsp;
+### 3.3 `robot_commander.{h,cpp}` in the middle tier
+
+&nbsp;
+### 3.4 `motion_controller.{h,cpp}` in the middle tier
 
 
 &nbsp;
