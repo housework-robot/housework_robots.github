@@ -223,6 +223,12 @@ Here is a set of repositories, containing 3 kinds of contents,
    [![HTTPS communication from a robot to a website](https://img.youtube.com/vi/ZgnlNSQU3cQ/hqdefault.jpg)](https://www.youtube.com/watch?v=ZgnlNSQU3cQ)
 
 &nbsp;
+
+### 8. S06E08. [Anatomy of Mushibot's Teleoperation](./S06_robot_side/S06E08_mushibot_teleoperation.md)
+
+   [![Mushibot's teleoperation from a website](https://img.youtube.com/vi/CrvC4N_4zzU/hqdefault.jpg)](https://www.youtube.com/watch?v=CrvC4N_4zzU)    
+
+&nbsp;
 &nbsp;
 
 ### To be continued ...
