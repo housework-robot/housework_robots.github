@@ -213,14 +213,15 @@ into a 3-tier system architecture.
 ### 3.1 Http client in the upper tier
 
 In [the previous blog](./S06E07_mushibot_wifi_ws_http.md#4-https-client), 
-we explained how we implemented [https client](./S06E08_src/src/Mushibot20250120/src/upper_tier/telecomm_channel.cpp#L297) for https GET. 
+we explained how we implemented [https client](./S06E07_src/src/Mushibot20250114/src/wswifi.cpp#L171) for https GET. 
 
 This time, we implemented http client for both GET and POST.
 
-The following source code fragment implements http client for POST, with payload in json. 
+[The following source code fragment](./S06E08_src/src/Mushibot20250120/src/upper_tier/telecomm_channel.cpp#L237) 
+implements http client for POST, with payload in json. 
 
 ~~~
-String WsWifi::http_post(String http_url, JsonDocument payload_json) {
+String TelecommChannel::http_post(String http_url, JsonDocument payload_json) {
     HTTPClient http_client;
     int http_res_code;
     String http_res_str;
@@ -237,9 +238,12 @@ String WsWifi::http_post(String http_url, JsonDocument payload_json) {
 
         if (http_res_code == HTTP_CODE_OK) {            
             http_res_str = http_client.getString();
+            Log.verboseln("The following content is retrieved from '%s' by 'HTTP POST':", http_url.c_str());
+            Log.verboseln(http_res_str.c_str());
+            Log.verboseln("The above content is retrieved from '%s' by 'HTTP POST'.\n", http_url.c_str());
         }
         else {
-            Serial.printf("\n[WARN] Cannot access '%s' for http POST, http code is: '%d'.\n", 
+            Log.warningln("Cannot access '%s' for http POST, http code is: '%d'\n", 
                 http_url.c_str(), http_res_code);
         }
 
