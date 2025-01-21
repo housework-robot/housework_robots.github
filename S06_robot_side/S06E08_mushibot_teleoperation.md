@@ -485,6 +485,9 @@ The demo shows the entire dataflow,
 
 3. Following the command, the mushibot moved his legs and wheels.
 
+   [![Mushibot's teleoperation from a website](https://img.youtube.com/vi/CrvC4N_4zzU/hqdefault.jpg)](https://www.youtube.com/watch?v=CrvC4N_4zzU)    
+
+
    
 
 
