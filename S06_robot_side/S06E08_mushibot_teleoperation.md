@@ -212,7 +212,7 @@ As mentioned in the previous section, the express-js web server passes a paramet
 one parameter is `robot_ip`, 
 and the embedded-js webpage can use it by `<%= robot_ip %>`. 
 
-Here is a fragment of [the embedded-js webpage](./S06E08_src/src/Mushibot20250120/test/teleop_website/views/index.ejs#L310). 
+Here is a fragment of [the embedded-js webpage](./S06E08_src/src/Mushibot20250120/test/teleop_website/views/index.ejs#L317). 
 
 ~~~
 <script>
@@ -252,7 +252,7 @@ Here is a fragment of [the embedded-js webpage](./S06E08_src/src/Mushibot2025012
 
    The javascript can use the `robot_ip` parameter by `<%= robot_ip %>`.
 
-   By the way, [the title of the webpage](./S06E08_src/src/Mushibot20250120/test/teleop_website/views/index.ejs#L265)
+   By the way, [the title of the webpage](./S06E08_src/src/Mushibot20250120/test/teleop_website/views/index.ejs#L272)
    also use `robot_ip` parameter.
 
    ~~~
@@ -275,6 +275,7 @@ Here is a fragment of [the embedded-js webpage](./S06E08_src/src/Mushibot2025012
 &nbsp;
 #### 2. WebSocket client
 
+Let us look into [the scripts inside the EmbeddedJS webpage](./S06E08_src/src/Mushibot20250120/test/teleop_website/views/index.ejs#L332),
 ~~~
         var tries = 3;
         function websocket_bind_events() {
