@@ -57,6 +57,9 @@ We used [express-js](https://expressjs.com/en/starter/hello-world.html)
 and [embedded-js templates](https://github.com/mde/ejs) 
 to construct an experimental website. 
 
+&nbsp;
+#### 1. Pass parameters to EmbeddedJS webpage
+
 Here is a fragment of the source code of 
 [the express-js web server](./S06E08_src/src/Mushibot20250120/test/teleop_website/app.js). 
 
@@ -66,24 +69,16 @@ const app = express();
 app.set('view engine', 'ejs');
 // app.use(express.static('public'));
 
-const bodyParser = require("body-parser");
+var ip = require("ip");
+var server_ip = ip.address();
+console.log("website_ip: '" + server_ip + "'");
 
-// for parsing application/json
-app.use(bodyParser.json());
-
-// Randomly assign an original value
-var mushibot_ip = "mushibot.192.168.0.123";
+var mushibot_ip = "192.168.0.123";
 
 app.get("/", (req, res) => {
     res.render(
-        'index', {robot_ip: mushibot_ip}
+        'index', {robot_ip: mushibot_ip, website_ip: server_ip}
     );
-});
-
-app.post("/post_json", (req, res) => {
-    mushibot_ip = (req.body)["robot_ip"];
-    console.log(`Robot local IP address: "${mushibot_ip}"`);
-    res.send(`Robot local IP address: "${mushibot_ip}"`);
 });
 
 const port = 3000;
@@ -96,28 +91,130 @@ app.listen(port, () => {
 
    We used embedded-js templates to create the webpages, rather than the plain HTML file.
 
-2. `app.use(bodyParser.json())`
+2. `app.get("/", (req, res) => { res.render('index', {robot_ip: mushibot_ip}); });`
 
-   We need bodyParser to parse json messages.
-
-3. `app.get("/", (req, res) => { res.render('index', {robot_ip: mushibot_ip}); });`
-
-   The express-js web server will use `index.ejs` made by embedded-js, when the user's browser sends request to GET `/`. 
+   The express-js web server will compile and send `index.ejs` which is made by embedded-js,
+   to the user's browser,
+   when his browser wants to open the website, and sends http request to GET `/`. 
 
    The express-js will pass a parameter object to the `index.ejs` webpage,
-   the parameter object contains a parameter called `robot_ip`. 
+   the parameter object contains several parameters including `robot_ip` and `website_ip`.
 
-4. `app.post("/post_json", (req, res) => { mushibot_ip = (req.body)["robot_ip"];}`
+3. `require("ip")` imports a package `ip`.
 
-   The express-js web server is ready to receive http post requests with json payload.
+   `ip.address()` gets the IP address, like 192.168.0.xxx, in the local network.
+   
 
-   The json payload contains a variable called `robot_ip`.
+&nbsp;
+#### 2. Receive mushibot status and write into datafile
 
-   We use a variable `mushibot_ip` to store the value of `robot_ip`.
+~~~
+const bodyParser = require("body-parser");
+// for parsing application/json
+app.use(bodyParser.json());
+// for parsing application/x-www-form-urlencoded
+app.use(bodyParser.urlencoded({extended: false}));
+
+function now_str() {
+    var now = new Date();
+    var now_year = now.getFullYear().toString();
+
+    var now_month =  (now.getMonth() + 1).toString();
+    now_month = now_month > 10? now_month.toString() : "0".concat(now_month.toString());
+
+    var now_date = now.getDate().toString();
+    now_date = now_date > 10? now_date.toString() : "0".concat(now_date.toString());
+
+    var now_hour = now.getHours();
+    now_hour = now_hour > 10? now_hour.toString() : "0".concat(now_hour.toString());
+
+    var now_minute = now.getMinutes();
+    now_minute = now_minute > 10? now_minute.toString(): "0".concat(now_minute.toString());
     
+    var now_full_str = now_year.concat("_", now_month, now_date, "_", now_hour, now_minute);
+    console.log("Now time is: '" + now_full_str + "'");
+
+    return now_full_str;
+}
+
+var fs = require("fs");
+var now_full_str = now_str();
+var latest_datafile = "data/" + now_full_str + ".jsonl";
+
+app.get("/", (req, res) => {
+    var now_full_str = now_str();
+    latest_datafile = "data/" + now_full_str + ".jsonl";
+
+    fs.writeFile(latest_datafile, "", function (err) {
+        if (err) throw err;
+        console.log("The latest datafile will be named as: '" + latest_datafile + "'.");
+    });
+});
+
+
+app.post("/post_status", (req, res) => {
+    var req_str = JSON.stringify(req.body) + "\n";
+    fs.appendFile(latest_datafile, req_str, function (err) {
+        if (err) {
+            console.log(`Cannot append to file: "${latest_datafile}"`);
+        }
+        else {
+            res.send(`Data appended to file: "${latest_datafile}"`);
+        } 
+    });
+    
+    // res.redirect('/');  
+});
+~~~
+
+1. `bodyParser = require("body-parser")` imports a package `body-parser`,
+
+   `app.use(bodyParser.json())` the ExpressJS engine uses this package to parse the HTTP body in JSON.
+
+2. `function now_str()` gets the current time, in the format of YYYY_MMDD_hhmm,
+
+   For example, 2025_0124_1502. 
+
+3. `fs = require("fs")` imports a `fs` package to handle files,
+
+   `fs` packages can reate file, read, write, append, delete, and rename it.
+
+4. In `app.get("/", ...)`, the ExpressJS web server create a new datafile.
+
+   `fs.writeFile(latest_datafile, "",...`, creates a new datafile, but actually don't write anything into it.
+
+5. In `app.post("/post_status", ...)`, the ExpressJS web server adds a new data point to the existent datafile.
+
+   Everytime the ExpressJS web server receives a new POST payload, it serializes the payload into a string in JSON format.
+
+   Each line of the datafile is an independent data point in json format.
+
+
+&nbsp;
+#### 3. Cross-origin resource sharing (CORS)
+
+~~~
+const cors = require('cors');
+app.use(cors({origin: true, credentials: true}));
+app.use((req, res, next) => {
+    res.header('Access-Control-Allow-Origin', '*');
+    next();
+});
+~~~
+
+Suppose the ExpressJS web server runs in the localhost, and we want to open the webpage in the browser running in the same machine, 
+the browser cannot open the webpage, because of CORS. 
+
+The workaround the CORS blocking, a solution is to use a package `cors`.
+
+
 
 &nbsp;
 ### 2.2 EmbeddedJS webpage
+
+
+&nbsp;
+#### 1. Receive parameters from ExpressJS
 
 As mentioned in the previous section, the express-js web server passes a parameter object to the embedded-js webpage, 
 one parameter is `robot_ip`, 
@@ -174,6 +271,11 @@ Here is a fragment of [the embedded-js webpage](./S06E08_src/src/Mushibot2025012
    The value of the `<%= robot_ip %>` parameter is received by the the express-js web server from the mushibot.
 
    The mushibot sends the `robot_ip` by http POST to the express-js web server.
+
+
+&nbsp;
+#### 2. WebSocket client
+
 
 
 &nbsp;
