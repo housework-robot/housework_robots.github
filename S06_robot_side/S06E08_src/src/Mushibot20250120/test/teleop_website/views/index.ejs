@@ -62,8 +62,15 @@
         /* border: 2px red solid; */
     }
     .view2 {
-        width: 140px;
-        height: 30px;
+        width: auto;
+        height: 60px;
+        line-height: 60px;
+        text-align: center;
+        font-family: 等线;
+        color: rgb(95, 1, 1);
+
+        /* width: 140px; */
+        /* height: 30px; */
         padding: 0px;
         margin: 15px auto;
         vertical-align:middle;
@@ -264,7 +271,8 @@
     <h2> WIFI 遥操作模式 </h2>
     <h3> 已经与机器人 ( IP = <%= robot_ip %> ) 连线了 </h3>
     <div class="view2">
-        <input type="checkbox" id="stable" class="switch" onclick="is_stable()" style="vertical-align:middle">Robot Go!</input>
+        <input type="checkbox" id="stable" class="switch" onclick="is_stable()" style="vertical-align:middle">
+        Start remote control, and Create a new data file!</input>
     </div>
     <center><body>
         <!-- Example of two JoyStick integrated in the page structure -->
@@ -306,21 +314,97 @@
    
 
     <!-- <p id="tips" align="center" style="font-size: 20;"></p> -->
-    <script>
-        window.INITIAL_STATE = {ROBOT_IP: "<%= robot_ip %>"};
+<script>
+        window.INITIAL_STATE = {
+            ROBOT_IP: "<%= robot_ip %>", 
+            NOW_STR: "<%= now_str %>",
+            WEBSITE_IP: "<%= website_ip %>"    
+        };
+
 
         var socket; // socket通信
         var g_roll=0; g_h=38; 
         var g_linear = 0; g_angular = 0; g_stable = 0; 
         var joyX = 0;
         var joyY = 0;
+
+
+        var tries = 3;
+        function websocket_bind_events() {
+            socket.onopen = () => {
+                console.log(`WebSocket.onopen(), readyState: '${socket.readyState}'`);
+            };
+            socket.onerror = () => {
+                console.log(`WebSocket.onerror(), readyState: '${socket.readyState}'`);
+
+                if(tries > 0) {
+                    tries--;
+                    setTimeout(() => {websocket_connect_with_retries();}, 1000);  
+                } else {
+                    let test_http_get = "http://" + window.INITIAL_STATE.WEBSITE_IP + ":3000/hello/邓侃";
+                    console.log("test_http_get: '" + test_http_get + "'");
+
+                    fetch(test_http_get)
+                        .then( (response) => {
+                            if (!response.ok) {
+                            throw new Error("Cannot http get: '" + test_http_get + "'");
+                        }
+
+                        return response.json();
+                        // return response.data;
+                        })
+                        .then ( (data) => {
+                            let content = data["Content"];
+                            console.log("Data: '" + content + "'");
+                        })
+                        .catch ( (error) => console.log("Error: '" + error + "'")
+                        );
+
+                    throw new Error("Maximum websocket retries reached, report to webserver.");
+                }
+            };
+        };
+
+        function websocket_connect_with_retries() {
+            let ws_url = 'ws://' + window.INITIAL_STATE.ROBOT_IP + ':81/';
+
+            console.log("Try to connect to: '" + ws_url + "'");
+            socket = new WebSocket(ws_url);
+
+            setTimeout(websocket_bind_events, 1000);
+            console.log(`WebSocket.new(), readyState: '${socket.readyState}'`);
+        }
+
+
+        function websocket_send(payload_str) {
+            if (socket.readyState == socket.OPEN) {
+                console.log(payload_str);
+                socket.send(payload_str);
+            }
+            else {            
+                websocket_connect_with_retries();
+
+                if (socket.readyState == socket.OPEN) {
+                    console.log(payload_str);
+                    socket.send(payload_str);
+                }
+                else {   
+                    console.log("无法连接到 websocket server，已经向 webserver 汇报了。");
+                }            
+            }
+        }
+
+                
         // socket_init在页面载入完成后触发
         function socket_init() {
+            
             console.log("Connecting to mushibot, IP = " + window.INITIAL_STATE.ROBOT_IP);
+            console.log("Website IP = " + window.INITIAL_STATE.WEBSITE_IP);
+            console.log("Now timestamp = " + window.INITIAL_STATE.NOW_STR);
 
-            // 初始化websocket客户端
-            //socket = new WebSocket('ws://' + '192.168.4.1' + ':81/'); // AP模式
-            socket = new WebSocket('ws://' + window.INITIAL_STATE.ROBOT_IP + ':81/'); // sta模式
+            // 初始化websocket客户端content
+            // socket = new WebSocket('ws://' + window.INITIAL_STATE.ROBOT_IP + ':81/'); // sta模式
+            websocket_connect_with_retries();
         }
 
         function setroll() {
@@ -359,8 +443,8 @@
                         'linear':g_linear,'angular':g_angular,'stable':g_stable,
                         'mode':'basic','dir':"stop",
                         'joy_y':joyY,'joy_x':joyX,};
-            socket.send(JSON.stringify(data));
-            console.log(data);
+
+            websocket_send(JSON.stringify(data));
         }
 
 
@@ -390,7 +474,7 @@
                         'roll':g_roll,'height':g_h,
                         'linear':g_linear,'angular':g_angular,'stable':g_stable,
                         'joy_x':joyX,'joy_y':joyY,};
-            // socket.send(JSON.stringify(data));
+            // websocket_send(JSON.stringify(data));
             // console.log(data);
         }
         function stop() {
@@ -399,7 +483,8 @@
                         'roll':g_roll,'height':g_h,
                         'linear':g_linear,'angular':g_angular,'stable':g_stable,
                         'joy_x':joyX,'joy_y':joyY,};
-            socket.send(JSON.stringify(data));
+
+            websocket_send(JSON.stringify(data));
             // console.log(data); // 打印测试
         }
         
@@ -447,8 +532,7 @@
             var movedX = centerX;
             var movedY = centerY;
             
-            
-                
+                         
             // Check if the device support the touch or not
             if("ontouchstart" in document.documentElement)
             {
