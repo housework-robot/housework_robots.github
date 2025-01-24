@@ -49,15 +49,12 @@ One task of the javascript is to set up the websocket connection from the browse
 The javascript running in the user's browser is the websocket client,
 and the mushibot is the websocket server.
 
-
-&nbsp;
 ### 2.1 ExpressJS web server
 
 We used [express-js](https://expressjs.com/en/starter/hello-world.html) 
 and [embedded-js templates](https://github.com/mde/ejs) 
 to construct an experimental website. 
 
-&nbsp;
 #### 1. Pass parameters to EmbeddedJS webpage
 
 Here is a fragment of the source code of 
@@ -105,7 +102,6 @@ app.listen(port, () => {
    `ip.address()` gets the IP address, like 192.168.0.xxx, in the local network.
    
 
-&nbsp;
 #### 2. Receive mushibot status and write into datafile
 
 ~~~
@@ -190,7 +186,6 @@ app.post("/post_status", (req, res) => {
    Each line of the datafile is an independent data point in json format.
 
 
-&nbsp;
 #### 3. Cross-origin resource sharing (CORS)
 
 ~~~
@@ -208,12 +203,9 @@ the browser cannot open the webpage, because of CORS.
 The workaround the CORS blocking, a solution is to use a package `cors`.
 
 
-
 &nbsp;
 ### 2.2 EmbeddedJS webpage
 
-
-&nbsp;
 #### 1. Receive parameters from ExpressJS
 
 As mentioned in the previous section, the express-js web server passes a parameter object to the embedded-js webpage, 
@@ -224,16 +216,22 @@ Here is a fragment of [the embedded-js webpage](./S06E08_src/src/Mushibot2025012
 
 ~~~
 <script>
-   window.INITIAL_STATE = {ROBOT_IP: "<%= robot_ip %>"};
+        window.INITIAL_STATE = {
+            ROBOT_IP: "<%= robot_ip %>", 
+            NOW_STR: "<%= now_str %>",
+            WEBSITE_IP: "<%= website_ip %>"    
+        };
 
-   // socket_init is automatically executed when the webpage is loaded.
-   function socket_init() {
-       console.log("Connecting to mushibot, IP = " + window.INITIAL_STATE.ROBOT_IP);
 
-       // Initialize websocket client
-       socket = new WebSocket('ws://' + window.INITIAL_STATE.ROBOT_IP + ':81/'); 
-   }
+        function socket_init() {         
+            console.log("Connecting to mushibot, IP = " + window.INITIAL_STATE.ROBOT_IP);
+            console.log("Website IP = " + window.INITIAL_STATE.WEBSITE_IP);
+            console.log("Now timestamp = " + window.INITIAL_STATE.NOW_STR);
 
+            // 初始化websocket客户端content
+            // socket = new WebSocket('ws://' + window.INITIAL_STATE.ROBOT_IP + ':81/'); // sta模式
+            websocket_connect_with_retries();
+        }
 ...
 </script> 
 ~~~
@@ -245,9 +243,10 @@ Here is a fragment of [the embedded-js webpage](./S06E08_src/src/Mushibot2025012
 
 2. `window.INITIAL_STATE = {ROBOT_IP: ...}`
   
-   We asked `INITIAL_STATE` to contain a object, and in the object there is a key-value pair called `ROBOT_IP`.
+   We asked `INITIAL_STATE` to contain a object, and in the object there is key-value pairs
+   including `ROBOT_IP`, `NOW_STR` and `WEBSITE_IP`.
 
-3. `window.INITIAL_STATE = {ROBOT_IP: "<%= robot_ip %>"}`
+3. `window.INITIAL_STATE = {ROBOT_IP: "<%= robot_ip %>", ...}`
   
    As mentioned above, the express-js web server passes a parameter `robot_ip` to the embedded-js webpage.
 
@@ -275,6 +274,81 @@ Here is a fragment of [the embedded-js webpage](./S06E08_src/src/Mushibot2025012
 
 &nbsp;
 #### 2. WebSocket client
+
+~~~
+        var tries = 3;
+        function websocket_bind_events() {
+            socket.onopen = () => {
+                console.log(`WebSocket.onopen(), readyState: '${socket.readyState}'`);
+            };
+            socket.onerror = () => {
+                console.log(`WebSocket.onerror(), readyState: '${socket.readyState}'`);
+
+                if(tries > 0) {
+                    tries--;
+                    setTimeout(() => {websocket_connect_with_retries();}, 1000);  
+                } else {
+                    let test_http_get = "http://" + window.INITIAL_STATE.WEBSITE_IP + ":3000/hello/邓侃";
+                    console.log("test_http_get: '" + test_http_get + "'");
+                    throw new Error("Maximum websocket retries reached, report to webserver.");
+                }
+            };
+        };
+
+        function websocket_connect_with_retries() {
+            let ws_url = 'ws://' + window.INITIAL_STATE.ROBOT_IP + ':81/';
+
+            console.log("Try to connect to: '" + ws_url + "'");
+            socket = new WebSocket(ws_url);
+
+            setTimeout(websocket_bind_events, 1000);
+            console.log(`WebSocket.new(), readyState: '${socket.readyState}'`);
+        }
+
+
+        function websocket_send(payload_str) {
+            if (socket.readyState == socket.OPEN) {
+                console.log(payload_str);
+                socket.send(payload_str);
+            }
+            else {            
+                websocket_connect_with_retries();
+
+                if (socket.readyState == socket.OPEN) {
+                    console.log(payload_str);
+                    socket.send(payload_str);
+                }
+                else {   
+                    console.log("无法连接到 websocket server，已经向 webserver 汇报了。");
+                }            
+            }
+        }
+~~~
+
+1. `socket.onopen` and `socket.onerror`, are two asynchronous websocket client events.
+
+   `function websocket_bind_events()` is the handler, waiting for those events and handling them.
+
+2. In case `socket.onerror` receives message that `new WebSocket(ws_url)` fails,
+   that means the browser cannot set up the websocket connection to the mushibot's websocket server. 
+
+   The browser will try to `new WebSocket(ws_url)`, i.e. try to connect 3 times.
+
+   The time interval is totally 2000 milisecond, because
+
+   * In `function websocket_bind_events()`, there is `setTimeout(() => {websocket_connect_with_retries();}, 1000);`,
+  
+   * In `function websocket_send()`, there is `setTimeout(websocket_bind_events, 1000);`.
+  
+3. Referring to [`websocket.js`](https://github.com/websockets/ws/blob/master/lib/websocket.js#L38),
+   `websocket.readyState` has `CONNECTING`, `OPEN`, `CLOSING', `CLOSED`, 4 states.
+
+   Only when `if (socket.readyState == socket.OPEN)`, the browser is ready to send data to and receive data from the mushibot. 
+
+4. In `function websocket_bind_events()`, when the event handler receives `socket.onopen()` event,
+   it doesn't guarantee that the socket's `readyState` is `OPEN`, that means the socket is ready to use.
+
+   It may take quite long, usually more 30 seconds, for `new WebSocket(ws_url)` to complete its `CONNECTING` stage. 
 
 
 
